@@ -20,9 +20,9 @@ if %errorlevel% neq 0 (
 )
 
 REM Kich hoat virtual environment neu co
-if exist ".venv\Scripts\activate.bat" (
+if exist "venv\Scripts\activate.bat" (
     echo Kich hoat virtual environment...
-    call .venv\Scripts\activate.bat
+    call venv\Scripts\activate.bat
 )
 
 REM Set production environment (su dung SQLite thay vi PostgreSQL)

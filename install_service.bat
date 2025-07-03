@@ -50,8 +50,9 @@ if not exist "%NSSM_PATH%" (
     exit /b 1
 )
 
+REM Test NSSM (NSSM version tra ve exit code 1 nhung van hoat dong binh thuong)
 "%NSSM_PATH%" version >nul 2>&1
-if %errorlevel% neq 0 (
+if %errorlevel% gtr 1 (
     echo NSSM khong the chay!
     echo.
     pause

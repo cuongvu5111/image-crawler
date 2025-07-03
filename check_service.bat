@@ -6,10 +6,10 @@ echo ========================================
 echo.
 echo Kiem tra trang thai service...
 
-REM Đường dẫn NSSM
+REM Duong dan NSSM
 set NSSM_PATH=D:\app\nssm\win64\nssm.exe
 
-REM Kiểm tra NSSM
+REM Kiem  NSSM
 if not exist "%NSSM_PATH%" (
     echo NSSM khong tim thay tai: %NSSM_PATH%
     echo Kiem tra duong dan NSSM hoac cai dat NSSM
@@ -18,15 +18,16 @@ if not exist "%NSSM_PATH%" (
     exit /b 1
 )
 
+REM Test NSSM (NSSM version tra ve exit code 1 nhung van hoat dong binh thuong)
 "%NSSM_PATH%" version >nul 2>&1
-if %errorlevel% neq 0 (
+if %errorlevel% gtr 1 (
     echo NSSM khong the chay!
     echo.
     pause
     exit /b 1
 )
 
-REM Kiểm tra service
+REM Kiem  service
 "%NSSM_PATH%" status DjangoImageCrawler >nul 2>&1
 if %errorlevel% neq 0 (
     echo Service DjangoImageCrawler khong ton tai

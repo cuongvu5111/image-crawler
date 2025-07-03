@@ -16,8 +16,8 @@ if exist "venv\Scripts\activate.bat" (
     call venv\Scripts\activate.bat
 )
 
-REM Set production environment
-set DJANGO_SETTINGS_MODULE=DjangoProject.settings_production
+REM Set production environment (su dung SQLite thay vi PostgreSQL)
+REM set DJANGO_SETTINGS_MODULE=DjangoProject.settings_production
 set DEBUG=False
 
 echo.
@@ -58,8 +58,8 @@ echo   Nhan Ctrl+C de dung server
 echo ========================================
 echo.
 
-REM Khoi dong voi Gunicorn tren port 8008
-py -m gunicorn --bind 0.0.0.0:8008 --workers 4 --timeout 120 --max-requests 1000 --preload DjangoProject.wsgi:application
+REM Khoi dong voi Django development server tren Windows (Gunicorn khong ho tro Windows)
+py manage.py runserver 0.0.0.0:8008
 
 echo.
 echo Production server da dung.
