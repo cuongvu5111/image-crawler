@@ -6,6 +6,7 @@ from django.core.paginator import Paginator
 from django.db.models import Q
 from django.utils import timezone
 from django.conf import settings
+import pytz
 import requests
 import os
 from pathlib import Path
@@ -16,8 +17,22 @@ import urllib.parse
 from urllib.parse import urljoin, urlparse
 import mimetypes
 import json
+import zipfile
+import tempfile
+import threading
+import time
 from .models import CrawledImage, CrawlSession
 from .forms import CrawlImageForm, SearchImageForm
+
+
+def get_local_time_str(dt):
+    """Convert UTC datetime to local timezone string"""
+    if dt:
+        # Convert to local timezone
+        local_tz = pytz.timezone(settings.TIME_ZONE)
+        local_dt = dt.astimezone(local_tz)
+        return local_dt.strftime('%H:%M:%S')
+    return ''
 
 
 def index(request):
@@ -55,7 +70,8 @@ def crawl_images(request):
             min_width = form.cleaned_data.get('min_width', 0)
             min_height = form.cleaned_data.get('min_height', 0)
             allowed_formats = form.cleaned_data['allowed_formats']
-            download_images = form.cleaned_data['download_images']
+            download_option = form.cleaned_data.get('download_option', 'server')
+            download_images = download_option in ['server', 'both']  # Tải về server nếu chọn server hoặc both
             save_folder = form.cleaned_data.get('save_folder', 'crawled_images')
             custom_folder_path = form.cleaned_data.get('custom_folder_path', '')
             
@@ -402,6 +418,8 @@ def get_crawl_progress(request, session_id):
     """API để lấy tiến trình crawl realtime"""
     try:
         session = get_object_or_404(CrawlSession, id=session_id)
+        # Refresh dữ liệu từ database để đảm bảo có dữ liệu mới nhất
+        session.refresh_from_db()
 
         # Tính toán progress
         total_progress = 0
@@ -415,19 +433,19 @@ def get_crawl_progress(request, session_id):
         for img in recent_images:
             if img.status == 'completed':
                 log_entries.append({
-                    'time': img.crawled_at.strftime('%H:%M:%S'),
+                    'time': get_local_time_str(img.crawled_at),
                     'message': f'✅ Đã tải: {img.image_name}',
                     'type': 'success'
                 })
             elif img.status == 'failed':
                 log_entries.append({
-                    'time': img.crawled_at.strftime('%H:%M:%S'),
+                    'time': get_local_time_str(img.crawled_at),
                     'message': f'❌ Lỗi: {img.image_name} - {img.error_message or "Không xác định"}',
                     'type': 'danger'
                 })
             elif img.status == 'downloading':
                 log_entries.append({
-                    'time': img.crawled_at.strftime('%H:%M:%S'),
+                    'time': get_local_time_str(img.crawled_at),
                     'message': f'⬇️ Đang tải: {img.image_name}',
                     'type': 'info'
                 })
@@ -616,4 +634,78 @@ def download_image_file(request, image_id):
             return response
     except Exception as e:
         messages.error(request, f'Lỗi khi tải file: {str(e)}')
+        return redirect('image_crawler:image_detail', image_id=image_id)
+
+
+def download_images_zip(request, session_id):
+    """Tạo và download file ZIP chứa tất cả ảnh từ một session crawl"""
+    session = get_object_or_404(CrawlSession, id=session_id)
+
+    # Lấy tất cả ảnh đã download thành công từ session này
+    images = CrawledImage.objects.filter(
+        source_url=session.target_url,
+        status='completed',
+        local_path__isnull=False
+    ).exclude(local_path='')
+
+    if not images.exists():
+        messages.error(request, 'Không có ảnh nào để tải về!')
+        return redirect('image_crawler:session_detail', session_id=session_id)
+
+    # Tạo file ZIP tạm thời
+    temp_zip = tempfile.NamedTemporaryFile(delete=False, suffix='.zip')
+
+    try:
+        with zipfile.ZipFile(temp_zip.name, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+            for image in images:
+                if os.path.exists(image.local_path):
+                    # Thêm file vào ZIP với tên gốc
+                    zip_file.write(image.local_path, image.image_name)
+
+        # Đọc file ZIP và trả về response
+        with open(temp_zip.name, 'rb') as f:
+            response = HttpResponse(f.read(), content_type='application/zip')
+
+            # Tạo tên file ZIP
+            domain = urlparse(session.target_url).netloc or 'images'
+            timestamp = session.started_at.strftime('%Y%m%d_%H%M%S')
+            filename = f"{domain}_{timestamp}_images.zip"
+
+            response['Content-Disposition'] = f'attachment; filename="{filename}"'
+            return response
+
+    except Exception as e:
+        messages.error(request, f'Lỗi khi tạo file ZIP: {str(e)}')
+        return redirect('image_crawler:session_detail', session_id=session_id)
+
+    finally:
+        # Xóa file tạm
+        try:
+            os.unlink(temp_zip.name)
+        except:
+            pass
+
+
+def download_single_image_direct(request, image_id):
+    """Download trực tiếp một ảnh từ URL gốc về máy người dùng"""
+    image = get_object_or_404(CrawledImage, id=image_id)
+
+    try:
+        # Headers để giả lập browser
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+        }
+
+        # Download ảnh từ URL gốc
+        response = requests.get(image.image_url, headers=headers, timeout=30)
+        response.raise_for_status()
+
+        # Tạo HTTP response để download
+        http_response = HttpResponse(response.content, content_type=response.headers.get('content-type', 'application/octet-stream'))
+        http_response['Content-Disposition'] = f'attachment; filename="{image.image_name}"'
+
+        return http_response
+
+    except Exception as e:
+        messages.error(request, f'Lỗi khi tải ảnh: {str(e)}')
         return redirect('image_crawler:image_detail', image_id=image_id)

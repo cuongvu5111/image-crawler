@@ -70,8 +70,8 @@ echo Dung service cu (neu co)...
 echo.
 echo Cai dat service moi...
 
-REM Cài đặt service
-"%NSSM_PATH%" install DjangoImageCrawler "%PROJECT_PATH%\start_production.bat"
+REM Cài đặt service với wrapper mới (không có BOM)
+"%NSSM_PATH%" install DjangoImageCrawler "%PROJECT_PATH%\start_service_wrapper.bat"
 if %errorlevel% neq 0 (
     echo Loi khi cai dat service!
     pause
@@ -103,7 +103,7 @@ echo Khoi dong service...
 if %errorlevel% equ 0 (
     echo Service da khoi dong thanh cong!
     echo.
-    echo Truy cap ung dung tai: http://localhost:8000
+    echo Truy cap ung dung tai: http://localhost:8008
     echo Kiem tra trang thai: services.msc
     echo Xem logs tai: %PROJECT_PATH%\logs\
 ) else (

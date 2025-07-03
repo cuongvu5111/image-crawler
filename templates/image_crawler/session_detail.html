@@ -86,6 +86,16 @@
                         </table>
                     </div>
                 </div>
+
+                <!-- Nút download ZIP -->
+                {% if session.images_downloaded > 0 %}
+                <div class="mt-3 text-center">
+                    <a href="{% url 'image_crawler:download_session_zip' session.id %}" class="btn btn-success btn-lg">
+                        <i class="fas fa-file-archive"></i> Tải tất cả ảnh về máy (ZIP)
+                        <span class="badge bg-light text-dark ms-2">{{ session.images_downloaded }} ảnh</span>
+                    </a>
+                </div>
+                {% endif %}
             </div>
         </div>
 

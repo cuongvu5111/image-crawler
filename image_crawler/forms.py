@@ -76,12 +76,29 @@ class CrawlImageForm(forms.Form):
     )
     
     # Tùy chọn lưu file
+    DOWNLOAD_CHOICES = [
+        ('server', 'Lưu trên server (có thể xem ngay)'),
+        ('user', 'Tải về máy người dùng (file ZIP)'),
+        ('both', 'Cả hai (lưu server + tạo ZIP)'),
+    ]
+
+    download_option = forms.ChoiceField(
+        label="Tùy chọn tải ảnh",
+        choices=DOWNLOAD_CHOICES,
+        initial='server',
+        widget=forms.RadioSelect(attrs={
+            'class': 'form-check-input'
+        }),
+        help_text="Chọn cách thức lưu ảnh sau khi crawl"
+    )
+
     download_images = forms.BooleanField(
-        label="Tải ảnh về máy",
+        label="Tải ảnh về server",
         initial=True,
         required=False,
         widget=forms.CheckboxInput(attrs={
-            'class': 'form-check-input'
+            'class': 'form-check-input',
+            'style': 'display: none;'  # Ẩn field cũ, sẽ được set tự động
         }),
         help_text="Có tải ảnh về thư mục local không"
     )

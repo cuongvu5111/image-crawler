@@ -74,13 +74,23 @@
 
                     <!-- Tùy chọn tải ảnh -->
                     <div class="mb-4">
-                        <div class="form-check form-switch">
-                            {{ form.download_images }}
-                            <label class="form-check-label fw-bold" for="{{ form.download_images.id_for_label }}">
-                                <i class="fas fa-download"></i> {{ form.download_images.label }}
-                            </label>
+                        <label class="form-label fw-bold">
+                            <i class="fas fa-download"></i> {{ form.download_option.label }}
+                        </label>
+                        <div class="mt-2">
+                            {% for choice in form.download_option %}
+                                <div class="form-check">
+                                    {{ choice.tag }}
+                                    <label class="form-check-label" for="{{ choice.id_for_label }}">
+                                        {{ choice.choice_label }}
+                                    </label>
+                                </div>
+                            {% endfor %}
                         </div>
-                        <div class="form-text">{{ form.download_images.help_text }}</div>
+                        <div class="form-text">{{ form.download_option.help_text }}</div>
+
+                        <!-- Hidden field cho backward compatibility -->
+                        {{ form.download_images }}
                     </div>
 
                     <!-- Thư mục lưu ảnh -->
@@ -303,17 +313,21 @@ $(document).ready(function() {
         }
     });
 
-    // Ẩn/hiện section chọn thư mục khi toggle download
-    $('#id_download_images').on('change', function() {
-        if ($(this).is(':checked')) {
+    // Ẩn/hiện section chọn thư mục khi thay đổi tùy chọn download
+    $('input[name="download_option"]').on('change', function() {
+        var selectedOption = $('input[name="download_option"]:checked').val();
+        if (selectedOption === 'server' || selectedOption === 'both') {
             $('#folder-selection').show();
+            $('#id_download_images').prop('checked', true);
         } else {
             $('#folder-selection').hide();
+            $('#id_download_images').prop('checked', false);
         }
     });
 
     // Khởi tạo trạng thái ban đầu
-    if (!$('#id_download_images').is(':checked')) {
+    var initialOption = $('input[name="download_option"]:checked').val();
+    if (initialOption !== 'server' && initialOption !== 'both') {
         $('#folder-selection').hide();
     }
 
@@ -435,7 +449,18 @@ function updateProgress() {
             let progressBar = $('#main-progress');
             progressBar.removeClass('bg-info bg-success bg-danger');
 
-            if (data.status === 'completed') {
+            // Debug logging
+            console.log('Progress update:', {
+                status: data.status,
+                is_completed: data.is_completed,
+                progress: data.progress,
+                downloaded: data.downloaded,
+                failed: data.failed,
+                total_found: data.total_found
+            });
+
+            // Kiểm tra hoàn thành dựa trên cả status và is_completed
+            if (data.status === 'completed' || data.is_completed) {
                 progressBar.addClass('bg-success');
                 $('#progress-text').text('Hoàn thành!');
                 completeProgress(data);
@@ -468,6 +493,33 @@ function completeProgress(data) {
 
     $('#current-task').text(message);
     addToLog(message, data.status === 'completed' ? 'success' : 'danger');
+
+    // Cập nhật phần "Đang tải ảnh hiện tại" khi hoàn thành
+    if (data.status === 'completed') {
+        // Cập nhật header
+        $('.card-header h6').html('<i class="fas fa-check-circle text-success"></i> Hoàn thành tải ảnh');
+
+        // Cập nhật nội dung
+        $('#current-image-name').text(`Đã hoàn thành tải ${data.downloaded} ảnh`);
+        $('#image-progress-percent').removeClass('bg-info').addClass('bg-success').text('100%');
+
+        // Cập nhật progress bar
+        $('#image-progress').css('width', '100%')
+            .removeClass('progress-bar-animated progress-bar-striped bg-success')
+            .addClass('bg-success');
+
+        // Ẩn thông tin size
+        $('#image-size').parent().hide();
+    } else if (data.status === 'failed') {
+        // Cập nhật header cho trường hợp thất bại
+        $('.card-header h6').html('<i class="fas fa-times-circle text-danger"></i> Tải ảnh thất bại');
+
+        $('#current-image-name').text('Quá trình tải ảnh đã thất bại');
+        $('#image-progress-percent').removeClass('bg-info').addClass('bg-danger').text('Lỗi');
+
+        $('#image-progress').removeClass('progress-bar-animated progress-bar-striped')
+            .addClass('bg-danger');
+    }
 }
 
 function resetProgress() {
@@ -477,10 +529,17 @@ function resetProgress() {
     $('#total-found, #downloaded, #failed, #remaining').text('0');
     $('#current-task').text('Đang khởi tạo crawler...');
     $('#speed').text('0 ảnh/phút');
+
+    // Reset phần "Đang tải ảnh hiện tại"
+    $('.card-header h6').html('<i class="fas fa-image"></i> Đang tải ảnh hiện tại');
     $('#current-image-name').text('Chưa có ảnh nào');
-    $('#image-progress').css('width', '0%');
-    $('#image-progress-percent').text('0%');
+    $('#image-progress').css('width', '0%')
+        .removeClass('bg-success bg-danger')
+        .addClass('progress-bar-striped progress-bar-animated bg-success');
+    $('#image-progress-percent').removeClass('bg-success bg-danger').addClass('bg-info').text('0%');
     $('#image-size, #image-total-size').text('0 KB');
+    $('#image-size').parent().show(); // Hiện lại thông tin size
+
     $('#loading-spinner').show();
     $('#cancel-btn').show();
     $('#view-results-btn').hide();

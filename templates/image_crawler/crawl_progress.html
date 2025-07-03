@@ -210,17 +210,26 @@ function updateProgress() {
                 $('#progress-text').text(data.progress + '%');
             }
             
-            // Kiểm tra hoàn thành
-            if (data.is_completed) {
+            // Debug logging
+            console.log('Progress update:', {
+                status: data.status,
+                is_completed: data.is_completed,
+                progress: data.progress
+            });
+
+            // Kiểm tra hoàn thành dựa trên cả status và is_completed
+            if (data.is_completed || data.status === 'completed' || data.status === 'failed') {
                 clearInterval(progressInterval);
                 $('#loading-spinner').hide();
                 $('#cancel-btn').hide();
                 $('#view-results-btn').show();
-                
+
                 // Hiển thị modal hoàn thành
                 $('#final-downloaded').text(data.downloaded);
                 $('#final-failed').text(data.failed);
                 $('#completedModal').modal('show');
+
+                console.log('Crawl completed, stopping progress tracking');
             }
         },
         error: function() {

@@ -74,13 +74,23 @@
 
                     <!-- Tùy chọn tải ảnh -->
                     <div class="mb-4">
-                        <div class="form-check form-switch">
-                            {{ form.download_images }}
-                            <label class="form-check-label fw-bold" for="{{ form.download_images.id_for_label }}">
-                                <i class="fas fa-download"></i> {{ form.download_images.label }}
-                            </label>
+                        <label class="form-label fw-bold">
+                            <i class="fas fa-download"></i> {{ form.download_option.label }}
+                        </label>
+                        <div class="mt-2">
+                            {% for choice in form.download_option %}
+                                <div class="form-check">
+                                    {{ choice.tag }}
+                                    <label class="form-check-label" for="{{ choice.id_for_label }}">
+                                        {{ choice.choice_label }}
+                                    </label>
+                                </div>
+                            {% endfor %}
                         </div>
-                        <div class="form-text">{{ form.download_images.help_text }}</div>
+                        <div class="form-text">{{ form.download_option.help_text }}</div>
+
+                        <!-- Hidden field cho backward compatibility -->
+                        {{ form.download_images }}
                     </div>
 
                     <!-- Nút submit -->
@@ -413,6 +423,33 @@ function completeProgress(data) {
 
     $('#current-task').text(message);
     addToLog(message, data.status === 'completed' ? 'success' : 'danger');
+
+    // Cập nhật phần "Đang tải ảnh hiện tại" khi hoàn thành
+    if (data.status === 'completed') {
+        // Cập nhật header
+        $('.card-header h6').html('<i class="fas fa-check-circle text-success"></i> Hoàn thành tải ảnh');
+
+        // Cập nhật nội dung
+        $('#current-image-name').text(`Đã hoàn thành tải ${data.downloaded} ảnh`);
+        $('#image-progress-percent').removeClass('bg-info').addClass('bg-success').text('100%');
+
+        // Cập nhật progress bar
+        $('#image-progress').css('width', '100%')
+            .removeClass('progress-bar-animated progress-bar-striped bg-success')
+            .addClass('bg-success');
+
+        // Ẩn thông tin size
+        $('#image-size').parent().hide();
+    } else if (data.status === 'failed') {
+        // Cập nhật header cho trường hợp thất bại
+        $('.card-header h6').html('<i class="fas fa-times-circle text-danger"></i> Tải ảnh thất bại');
+
+        $('#current-image-name').text('Quá trình tải ảnh đã thất bại');
+        $('#image-progress-percent').removeClass('bg-info').addClass('bg-danger').text('Lỗi');
+
+        $('#image-progress').removeClass('progress-bar-animated progress-bar-striped')
+            .addClass('bg-danger');
+    }
 }
 
 function resetProgress() {
