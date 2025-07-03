@@ -86,6 +86,34 @@ class CrawlImageForm(forms.Form):
         help_text="Có tải ảnh về thư mục local không"
     )
 
+    # Thư mục lưu ảnh
+    FOLDER_CHOICES = [
+        ('crawled_images', 'Thư mục mặc định (media/crawled_images)'),
+        ('downloads', 'Thư mục Downloads'),
+        ('desktop', 'Desktop'),
+        ('pictures', 'Thư mục Pictures'),
+        ('custom', 'Thư mục tùy chọn'),
+    ]
+
+    save_folder = forms.ChoiceField(
+        label="Thư mục lưu ảnh",
+        choices=FOLDER_CHOICES,
+        initial='crawled_images',
+        help_text="Chọn thư mục để lưu ảnh đã crawl",
+        widget=forms.Select(attrs={'class': 'form-select'})
+    )
+
+    custom_folder_path = forms.CharField(
+        label="Đường dẫn thư mục tùy chọn",
+        required=False,
+        help_text="Nhập đường dẫn thư mục (VD: C:/MyImages/)",
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'C:/MyImages/',
+            'id': 'custom-folder-input'
+        })
+    )
+
     def clean_url(self):
         """Validate URL"""
         url = self.cleaned_data.get('url')

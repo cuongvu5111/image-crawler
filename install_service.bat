@@ -26,8 +26,16 @@ set PROJECT_PATH=%PROJECT_PATH:~0,-1%
 echo Duong dan project: %PROJECT_PATH%
 echo.
 
-REM Đường dẫn NSSM
+REM Duong dan NSSM - Thu nhieu vi tri
 set NSSM_PATH=D:\app\nssm\win64\nssm.exe
+
+REM Neu khong tim thay, thu vi tri khac
+if not exist "%NSSM_PATH%" (
+    set NSSM_PATH=C:\Windows\System32\nssm.exe
+)
+if not exist "%NSSM_PATH%" (
+    set NSSM_PATH=nssm.exe
+)
 
 REM Kiểm tra NSSM
 if not exist "%NSSM_PATH%" (

@@ -7,6 +7,8 @@ from django.db.models import Q
 from django.utils import timezone
 from django.conf import settings
 import requests
+import os
+from pathlib import Path
 from bs4 import BeautifulSoup
 from PIL import Image
 import os
@@ -54,6 +56,8 @@ def crawl_images(request):
             min_height = form.cleaned_data.get('min_height', 0)
             allowed_formats = form.cleaned_data['allowed_formats']
             download_images = form.cleaned_data['download_images']
+            save_folder = form.cleaned_data.get('save_folder', 'crawled_images')
+            custom_folder_path = form.cleaned_data.get('custom_folder_path', '')
             
             # Tạo session crawl
             session = CrawlSession.objects.create(
@@ -62,12 +66,33 @@ def crawl_images(request):
             )
             
             try:
-                # Crawl ảnh
+                # Kiểm tra nếu là AJAX request
+                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                    # Chạy crawl trong background thread
+                    import threading
+
+                    def background_crawl():
+                        perform_image_crawl(
+                            url, max_images, min_width, min_height,
+                            allowed_formats, download_images, session,
+                            save_folder, custom_folder_path
+                        )
+
+                    # Bắt đầu thread
+                    thread = threading.Thread(target=background_crawl)
+                    thread.daemon = True
+                    thread.start()
+
+                    # Trả về session_id để JavaScript có thể track progress
+                    return JsonResponse({'session_id': session.id})
+
+                # Crawl ảnh (cho non-AJAX request)
                 result = perform_image_crawl(
-                    url, max_images, min_width, min_height, 
-                    allowed_formats, download_images, session
+                    url, max_images, min_width, min_height,
+                    allowed_formats, download_images, session,
+                    save_folder, custom_folder_path
                 )
-                
+
                 # Redirect đến trang progress để theo dõi realtime
                 return redirect('image_crawler:crawl_progress', session_id=session.id)
 
@@ -95,9 +120,43 @@ def crawl_images(request):
     return render(request, 'image_crawler/crawl.html', {'form': form})
 
 
-def perform_image_crawl(url, max_images, min_width, min_height, allowed_formats, download_images, session):
+def get_save_folder_path(save_folder, custom_path=None):
+    """Lấy đường dẫn thư mục lưu ảnh"""
+    if save_folder == 'crawled_images':
+        # Thư mục mặc định
+        folder_path = os.path.join(settings.MEDIA_ROOT, 'crawled_images')
+    elif save_folder == 'downloads':
+        # Thư mục Downloads
+        folder_path = os.path.join(Path.home(), 'Downloads', 'CrawledImages')
+    elif save_folder == 'desktop':
+        # Desktop
+        folder_path = os.path.join(Path.home(), 'Desktop', 'CrawledImages')
+    elif save_folder == 'pictures':
+        # Thư mục Pictures
+        folder_path = os.path.join(Path.home(), 'Pictures', 'CrawledImages')
+    elif save_folder == 'custom' and custom_path:
+        # Thư mục tùy chọn
+        folder_path = custom_path
+    else:
+        # Fallback về thư mục mặc định
+        folder_path = os.path.join(settings.MEDIA_ROOT, 'crawled_images')
+
+    # Tạo thư mục nếu chưa tồn tại
+    os.makedirs(folder_path, exist_ok=True)
+
+    return folder_path
+
+
+def perform_image_crawl(url, max_images, min_width, min_height, allowed_formats, download_images, session, save_folder='crawled_images', custom_path=None):
     """Thực hiện crawl ảnh từ URL"""
     try:
+        # Lấy đường dẫn thư mục lưu ảnh
+        save_folder_path = get_save_folder_path(save_folder, custom_path)
+
+        # Cập nhật trạng thái bắt đầu
+        session.notes = f'Đang kết nối đến trang web... (Lưu vào: {save_folder_path})'
+        session.save()
+
         # Headers để giả lập browser thực
         headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
@@ -123,6 +182,9 @@ def perform_image_crawl(url, max_images, min_width, min_height, allowed_formats,
         time.sleep(2)
 
         # Lấy nội dung trang với retry
+        session.notes = 'Đang tải nội dung trang web...'
+        session.save()
+
         max_retries = 3
         for attempt in range(max_retries):
             try:
@@ -171,7 +233,7 @@ def perform_image_crawl(url, max_images, min_width, min_height, allowed_formats,
 
             # Cập nhật progress trong session notes
             progress_percent = int((index / total_images) * 100)
-            session.notes = f"Đang xử lý ảnh {index}/{total_images} ({progress_percent}%)"
+            session.notes = f"Đang phân tích ảnh {index}/{total_images} ({progress_percent}%)"
             session.save()
 
             # Lấy URL ảnh
@@ -206,10 +268,13 @@ def perform_image_crawl(url, max_images, min_width, min_height, allowed_formats,
             if download_images:
                 try:
                     # Cập nhật trạng thái downloading
+                    crawled_image.status = 'downloading'
+                    crawled_image.save()
+
                     session.notes = f"Đang tải ảnh {downloaded_count + 1}/{found_count}: {img_name}"
                     session.save()
 
-                    download_result = download_image(crawled_image, headers, session, downloaded_count + 1, found_count)
+                    download_result = download_image(crawled_image, headers, session, downloaded_count + 1, found_count, save_folder_path)
                     if download_result:
                         downloaded_count += 1
                         session.images_downloaded = downloaded_count
@@ -258,7 +323,7 @@ def perform_image_crawl(url, max_images, min_width, min_height, allowed_formats,
         }
 
 
-def download_image(crawled_image, headers, session=None, current_index=1, total_count=1):
+def download_image(crawled_image, headers, session=None, current_index=1, total_count=1, save_folder_path=None):
     """Download ảnh và lưu vào local với progress tracking"""
     try:
         crawled_image.status = 'downloading'
@@ -271,7 +336,10 @@ def download_image(crawled_image, headers, session=None, current_index=1, total_
             session.save()
 
         # Tạo thư mục lưu ảnh
-        media_dir = os.path.join(settings.BASE_DIR, 'media', 'crawled_images')
+        if save_folder_path:
+            media_dir = save_folder_path
+        else:
+            media_dir = os.path.join(settings.BASE_DIR, 'media', 'crawled_images')
         os.makedirs(media_dir, exist_ok=True)
 
         # Download ảnh với progress tracking
@@ -340,6 +408,30 @@ def get_crawl_progress(request, session_id):
         if session.total_images_found > 0:
             total_progress = int(((session.images_downloaded + session.images_failed) / session.total_images_found) * 100)
 
+        # Lấy log từ các ảnh đã crawl gần đây (theo URL)
+        recent_images = CrawledImage.objects.filter(source_url=session.target_url).order_by('-crawled_at')[:5]
+        log_entries = []
+
+        for img in recent_images:
+            if img.status == 'completed':
+                log_entries.append({
+                    'time': img.crawled_at.strftime('%H:%M:%S'),
+                    'message': f'✅ Đã tải: {img.image_name}',
+                    'type': 'success'
+                })
+            elif img.status == 'failed':
+                log_entries.append({
+                    'time': img.crawled_at.strftime('%H:%M:%S'),
+                    'message': f'❌ Lỗi: {img.image_name} - {img.error_message or "Không xác định"}',
+                    'type': 'danger'
+                })
+            elif img.status == 'downloading':
+                log_entries.append({
+                    'time': img.crawled_at.strftime('%H:%M:%S'),
+                    'message': f'⬇️ Đang tải: {img.image_name}',
+                    'type': 'info'
+                })
+
         data = {
             'status': session.status,
             'total_found': session.total_images_found,
@@ -347,7 +439,9 @@ def get_crawl_progress(request, session_id):
             'failed': session.images_failed,
             'progress': total_progress,
             'current_task': session.notes or 'Đang khởi tạo...',
-            'is_completed': session.status in ['completed', 'failed', 'cancelled']
+            'is_completed': session.status in ['completed', 'failed', 'cancelled'],
+            'log_entries': log_entries,
+            'current_image': recent_images.first().image_name if recent_images.exists() else None
         }
 
         return JsonResponse(data)

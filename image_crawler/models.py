@@ -5,7 +5,7 @@ import os
 
 class CrawledImage(models.Model):
     """Model để lưu thông tin ảnh đã crawl"""
-    
+
     # URL gốc của trang web
     source_url = models.URLField(verbose_name="URL nguồn", max_length=500)
     

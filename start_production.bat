@@ -50,16 +50,16 @@ echo [4/4] Khoi dong production server...
 echo.
 echo ========================================
 echo   Production Server URLs:
-echo   Local:    http://127.0.0.1:8000
-echo   Network:  http://0.0.0.0:8000
+echo   Local:    http://127.0.0.1:8008
+echo   Network:  http://0.0.0.0:8008
 echo
 echo   Workers: 4
 echo   Nhan Ctrl+C de dung server
 echo ========================================
 echo.
 
-REM Khoi dong voi Gunicorn
-py -m gunicorn --bind 0.0.0.0:8000 --workers 4 --timeout 120 --max-requests 1000 --preload DjangoProject.wsgi:application
+REM Khoi dong voi Gunicorn tren port 8008
+py -m gunicorn --bind 0.0.0.0:8008 --workers 4 --timeout 120 --max-requests 1000 --preload DjangoProject.wsgi:application
 
 echo.
 echo Production server da dung.

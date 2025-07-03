@@ -9,7 +9,7 @@
 ### 2. Cài đặt project
 ```bash
 # Clone hoặc tải ZIP project
-cd DjangoProject
+cd D:\www\PycharmProjects\DjangoProject
 
 # Chạy setup tự động
 setup.bat

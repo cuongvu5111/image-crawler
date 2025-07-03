@@ -36,9 +36,9 @@
 ```bash
 # Clone repository (nếu có Git)
 git clone <repository-url>
-cd DjangoProject
+cd D:\www\PycharmProjects\DjangoProject
 
-# Hoặc tải ZIP và giải nén
+# Hoặc tải ZIP và giải nén vào D:\www\PycharmProjects\DjangoProject
 ```
 
 ### Bước 3: Cài đặt tự động

@@ -83,29 +83,6 @@
                         <div class="form-text">{{ form.download_images.help_text }}</div>
                     </div>
 
-                    <!-- Thư mục lưu ảnh -->
-                    <div class="mb-4" id="folder-selection">
-                        <label for="{{ form.save_folder.id_for_label }}" class="form-label fw-bold">
-                            <i class="fas fa-folder"></i> {{ form.save_folder.label }}
-                        </label>
-                        {{ form.save_folder }}
-                        <div class="form-text">{{ form.save_folder.help_text }}</div>
-
-                        <!-- Thư mục tùy chọn -->
-                        <div class="mt-3" id="custom-folder-section" style="display: none;">
-                            <label for="{{ form.custom_folder_path.id_for_label }}" class="form-label">
-                                <i class="fas fa-folder-open"></i> {{ form.custom_folder_path.label }}
-                            </label>
-                            <div class="input-group">
-                                {{ form.custom_folder_path }}
-                                <button class="btn btn-outline-secondary" type="button" id="browse-folder-btn">
-                                    <i class="fas fa-search"></i> Duyệt
-                                </button>
-                            </div>
-                            <div class="form-text">{{ form.custom_folder_path.help_text }}</div>
-                        </div>
-                    </div>
-
                     <!-- Nút submit -->
                     <div class="d-grid gap-2">
                         <button type="submit" class="btn btn-primary btn-lg" id="crawl-btn">
@@ -279,44 +256,6 @@ let progressInterval = null;
 let startTime = null;
 
 $(document).ready(function() {
-    // Xử lý hiển thị thư mục tùy chọn
-    $('#id_save_folder').on('change', function() {
-        if ($(this).val() === 'custom') {
-            $('#custom-folder-section').show();
-        } else {
-            $('#custom-folder-section').hide();
-        }
-    });
-
-    // Xử lý nút duyệt thư mục
-    $('#browse-folder-btn').on('click', function() {
-        // Hiển thị dialog chọn thư mục (chỉ hoạt động trên desktop app)
-        if (window.electronAPI) {
-            window.electronAPI.selectFolder().then(folderPath => {
-                if (folderPath) {
-                    $('#id_custom_folder_path').val(folderPath);
-                }
-            });
-        } else {
-            // Sử dụng folder picker cho web browser
-            folderPicker.showDialog();
-        }
-    });
-
-    // Ẩn/hiện section chọn thư mục khi toggle download
-    $('#id_download_images').on('change', function() {
-        if ($(this).is(':checked')) {
-            $('#folder-selection').show();
-        } else {
-            $('#folder-selection').hide();
-        }
-    });
-
-    // Khởi tạo trạng thái ban đầu
-    if (!$('#id_download_images').is(':checked')) {
-        $('#folder-selection').hide();
-    }
-
     // Xử lý submit form với AJAX
     $('#crawl-form').on('submit', function(e) {
         e.preventDefault();
@@ -417,18 +356,9 @@ function updateProgress() {
                 $('#speed').text(speed + ' ảnh/phút');
             }
 
-            // Cập nhật ảnh hiện tại
-            if (data.current_image) {
-                $('#current-image-name').text(data.current_image);
-                // Simulation progress cho ảnh hiện tại
-                let randomProgress = Math.floor(Math.random() * 100);
-                $('#image-progress').css('width', randomProgress + '%');
-                $('#image-progress-percent').text(randomProgress + '%');
-            }
-
-            // Cập nhật log thật từ server
-            if (data.log_entries && data.log_entries.length > 0) {
-                updateLogFromServer(data.log_entries);
+            // Simulation cho progress ảnh hiện tại
+            if (data.progress > 0 && data.status === 'running') {
+                simulateCurrentImageProgress();
             }
 
             // Cập nhật màu progress bar
@@ -447,6 +377,9 @@ function updateProgress() {
                 progressBar.addClass('bg-info');
                 $('#progress-text').text(data.progress + '%');
             }
+
+            // Thêm vào log
+            addToLog(`📊 Tiến trình: ${data.progress}% - ${data.current_task}`, 'info');
         },
         error: function() {
             console.log('Lỗi khi lấy progress');
@@ -454,7 +387,19 @@ function updateProgress() {
     });
 }
 
-// Function này đã được thay thế bằng dữ liệu thật từ server
+function simulateCurrentImageProgress() {
+    // Giả lập progress tải ảnh hiện tại
+    let imageNames = ['photo.jpg', 'image.png', 'picture.gif', 'banner.webp', 'logo.svg'];
+    let randomImage = imageNames[Math.floor(Math.random() * imageNames.length)];
+    let randomSize = Math.floor(Math.random() * 500) + 50; // 50-550 KB
+    let randomProgress = Math.floor(Math.random() * 100);
+
+    $('#current-image-name').text(randomImage);
+    $('#image-total-size').text(randomSize + ' KB');
+    $('#image-progress').css('width', randomProgress + '%');
+    $('#image-progress-percent').text(randomProgress + '%');
+    $('#image-size').text(Math.round((randomProgress / 100) * randomSize) + ' KB');
+}
 
 function completeProgress(data) {
     clearInterval(progressInterval);
@@ -511,36 +456,6 @@ function showError(message) {
     showForm();
 }
 
-function updateLogFromServer(logEntries) {
-    // Xóa log cũ và thêm log mới từ server
-    let logContainer = $('#activity-log');
-
-    // Giữ lại log khởi tạo
-    let initLog = logContainer.find('.text-success').first();
-    logContainer.empty();
-    if (initLog.length > 0) {
-        logContainer.append(initLog);
-    }
-
-    // Thêm log từ server
-    logEntries.forEach(entry => {
-        let colorClass = entry.type === 'success' ? 'text-success' :
-                        entry.type === 'danger' ? 'text-danger' :
-                        entry.type === 'warning' ? 'text-warning' : 'text-info';
-
-        let logEntry = `
-            <div class="${colorClass} mb-1">
-                <strong>[${entry.time}]</strong> ${entry.message}
-            </div>
-        `;
-        logContainer.append(logEntry);
-    });
-
-    // Auto scroll to bottom
-    let scrollContainer = logContainer.parent();
-    scrollContainer.scrollTop(scrollContainer[0].scrollHeight);
-}
-
 function addToLog(message, type = 'info') {
     let timestamp = new Date().toLocaleTimeString();
     let icon = type === 'success' ? '✅' : type === 'danger' ? '❌' : type === 'warning' ? '⚠️' : 'ℹ️';
@@ -566,7 +481,4 @@ function clearLog() {
     `);
 }
 </script>
-
-<!-- Folder Picker Script -->
-<script src="{% load static %}{% static 'js/folder-picker.js' %}"></script>
 {% endblock %}
