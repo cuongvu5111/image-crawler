@@ -1,0 +1,352 @@
+﻿{% extends 'image_crawler/base.html' %}
+
+{% block title %}Demo Progress Bar - Image Crawler{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8 mx-auto">
+        <div class="card">
+            <div class="card-header">
+                <h4 class="mb-0">
+                    <i class="fas fa-spider fa-spin"></i> Demo Progress Bar
+                </h4>
+            </div>
+            <div class="card-body">
+                <!-- Progress Bar chính -->
+                <div class="mb-4">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="fw-bold">Tiến trình crawl ảnh:</span>
+                        <span id="progress-percent" class="badge bg-primary">0%</span>
+                    </div>
+                    <div class="progress mb-2" style="height: 25px;">
+                        <div id="main-progress" class="progress-bar progress-bar-striped progress-bar-animated bg-info" 
+                             role="progressbar" style="width: 0%" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
+                            <span id="progress-text" class="fw-bold">Đang khởi tạo...</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Thống kê realtime -->
+                <div class="row text-center mb-4">
+                    <div class="col-md-3">
+                        <div class="card bg-info text-white">
+                            <div class="card-body py-3">
+                                <i class="fas fa-search fa-2x mb-2"></i>
+                                <h4 id="total-found" class="mb-1">0</h4>
+                                <small>Ảnh tìm thấy</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card bg-success text-white">
+                            <div class="card-body py-3">
+                                <i class="fas fa-download fa-2x mb-2"></i>
+                                <h4 id="downloaded" class="mb-1">0</h4>
+                                <small>Đã tải</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card bg-danger text-white">
+                            <div class="card-body py-3">
+                                <i class="fas fa-times fa-2x mb-2"></i>
+                                <h4 id="failed" class="mb-1">0</h4>
+                                <small>Thất bại</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card bg-warning text-white">
+                            <div class="card-body py-3">
+                                <i class="fas fa-clock fa-2x mb-2"></i>
+                                <h4 id="remaining" class="mb-1">0</h4>
+                                <small>Còn lại</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Trạng thái hiện tại -->
+                <div class="alert alert-info" role="alert">
+                    <div class="d-flex align-items-center">
+                        <div class="spinner-border spinner-border-sm me-3" role="status" id="loading-spinner">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <div class="flex-grow-1">
+                            <strong>Đang thực hiện:</strong> 
+                            <span id="current-task">Đang khởi tạo crawler...</span>
+                        </div>
+                        <div>
+                            <span id="speed" class="badge bg-secondary">0 ảnh/phút</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Progress chi tiết từng ảnh -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h6 class="mb-0">
+                            <i class="fas fa-image"></i> Đang tải ảnh hiện tại
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span id="current-image-name" class="text-truncate">Chưa có ảnh nào</span>
+                            <span id="image-progress-percent" class="badge bg-info">0%</span>
+                        </div>
+                        <div class="progress" style="height: 15px;">
+                            <div id="image-progress" class="progress-bar progress-bar-striped progress-bar-animated bg-success" 
+                                 role="progressbar" style="width: 0%">
+                            </div>
+                        </div>
+                        <small class="text-muted">
+                            <span id="image-size">0 KB</span> / <span id="image-total-size">0 KB</span>
+                        </small>
+                    </div>
+                </div>
+
+                <!-- Log hoạt động -->
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h6 class="mb-0">
+                            <i class="fas fa-list"></i> Log hoạt động
+                        </h6>
+                        <button class="btn btn-sm btn-outline-secondary" onclick="clearLog()">
+                            <i class="fas fa-trash"></i> Xóa log
+                        </button>
+                    </div>
+                    <div class="card-body" style="max-height: 250px; overflow-y: auto; background-color: #f8f9fa;">
+                        <div id="activity-log" style="font-family: 'Courier New', monospace; font-size: 0.9em;">
+                            <div class="text-success">
+                                <i class="fas fa-play"></i> <strong>[00:00:00]</strong> Khởi tạo Image Crawler...
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Nút điều khiển -->
+                <div class="text-center mt-4">
+                    <button id="start-demo-btn" class="btn btn-primary me-2" onclick="startDemo()">
+                        <i class="fas fa-play"></i> Bắt đầu Demo
+                    </button>
+                    <button id="pause-btn" class="btn btn-warning me-2" onclick="pauseDemo()" style="display: none;">
+                        <i class="fas fa-pause"></i> Tạm dừng
+                    </button>
+                    <button id="stop-btn" class="btn btn-danger me-2" onclick="stopDemo()" style="display: none;">
+                        <i class="fas fa-stop"></i> Dừng
+                    </button>
+                    <button id="reset-btn" class="btn btn-outline-secondary" onclick="resetDemo()">
+                        <i class="fas fa-redo"></i> Reset
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let demoInterval;
+let currentProgress = 0;
+let totalImages = 25;
+let downloadedImages = 0;
+let failedImages = 0;
+let isPaused = false;
+let startTime;
+
+// Danh sách ảnh demo
+const demoImages = [
+    'photo1.jpg', 'banner.png', 'logo.gif', 'image.webp', 'picture.jpg',
+    'avatar.png', 'background.jpg', 'icon.svg', 'thumbnail.jpg', 'cover.png',
+    'header.jpg', 'footer.png', 'sidebar.gif', 'content.jpg', 'gallery.png',
+    'portfolio.jpg', 'product.png', 'service.jpg', 'about.png', 'contact.jpg',
+    'news.png', 'blog.jpg', 'article.png', 'story.jpg', 'feature.png'
+];
+
+function startDemo() {
+    $('#start-demo-btn').hide();
+    $('#pause-btn, #stop-btn').show();
+    
+    startTime = new Date();
+    currentProgress = 0;
+    downloadedImages = 0;
+    failedImages = 0;
+    isPaused = false;
+    
+    addToLog('🚀 Bắt đầu crawl demo...', 'info');
+    addToLog('🔍 Đang phân tích trang web...', 'info');
+    
+    setTimeout(() => {
+        addToLog(`✅ Tìm thấy ${totalImages} ảnh`, 'success');
+        $('#total-found').text(totalImages);
+        startImageDownload();
+    }, 2000);
+}
+
+function startImageDownload() {
+    demoInterval = setInterval(() => {
+        if (isPaused) return;
+        
+        if (currentProgress >= totalImages) {
+            completeDemo();
+            return;
+        }
+        
+        // Simulate download
+        let currentImage = demoImages[currentProgress];
+        let success = Math.random() > 0.1; // 90% success rate
+        
+        // Update current image progress
+        $('#current-image-name').text(currentImage);
+        simulateImageDownload(currentImage, success);
+        
+        currentProgress++;
+        
+        if (success) {
+            downloadedImages++;
+            $('#downloaded').text(downloadedImages);
+            addToLog(`✅ Đã tải: ${currentImage}`, 'success');
+        } else {
+            failedImages++;
+            $('#failed').text(failedImages);
+            addToLog(`❌ Lỗi tải: ${currentImage}`, 'danger');
+        }
+        
+        // Update overall progress
+        let progressPercent = Math.round((currentProgress / totalImages) * 100);
+        $('#main-progress').css('width', progressPercent + '%');
+        $('#progress-percent').text(progressPercent + '%');
+        $('#progress-text').text(`${currentProgress}/${totalImages} ảnh`);
+        $('#remaining').text(totalImages - currentProgress);
+        
+        // Update speed
+        let elapsed = (new Date() - startTime) / 1000 / 60; // minutes
+        let speed = Math.round(currentProgress / elapsed);
+        $('#speed').text(speed + ' ảnh/phút');
+        
+        // Update current task
+        $('#current-task').text(`Đang tải ảnh ${currentProgress + 1}/${totalImages}: ${demoImages[currentProgress] || 'Hoàn thành'}`);
+        
+    }, 1500); // 1.5 giây mỗi ảnh
+}
+
+function simulateImageDownload(imageName, success) {
+    let imageProgress = 0;
+    let imageSize = Math.floor(Math.random() * 500) + 50; // 50-550 KB
+    
+    $('#image-total-size').text(imageSize + ' KB');
+    
+    let imageInterval = setInterval(() => {
+        imageProgress += Math.floor(Math.random() * 25) + 10;
+        if (imageProgress >= 100) {
+            imageProgress = 100;
+            clearInterval(imageInterval);
+        }
+        
+        $('#image-progress').css('width', imageProgress + '%');
+        $('#image-progress-percent').text(imageProgress + '%');
+        $('#image-size').text(Math.round((imageProgress / 100) * imageSize) + ' KB');
+        
+        if (imageProgress === 100) {
+            if (success) {
+                $('#image-progress').removeClass('bg-info').addClass('bg-success');
+            } else {
+                $('#image-progress').removeClass('bg-info').addClass('bg-danger');
+            }
+            
+            setTimeout(() => {
+                $('#image-progress').removeClass('bg-success bg-danger').addClass('bg-info');
+                $('#image-progress').css('width', '0%');
+                $('#image-progress-percent').text('0%');
+                $('#image-size').text('0 KB');
+            }, 500);
+        }
+    }, 100);
+}
+
+function pauseDemo() {
+    isPaused = !isPaused;
+    if (isPaused) {
+        $('#pause-btn').html('<i class="fas fa-play"></i> Tiếp tục');
+        addToLog('⏸️ Tạm dừng crawl', 'warning');
+    } else {
+        $('#pause-btn').html('<i class="fas fa-pause"></i> Tạm dừng');
+        addToLog('▶️ Tiếp tục crawl', 'info');
+    }
+}
+
+function stopDemo() {
+    clearInterval(demoInterval);
+    $('#start-demo-btn').show();
+    $('#pause-btn, #stop-btn').hide();
+    $('#loading-spinner').hide();
+    addToLog('🛑 Đã dừng crawl', 'danger');
+}
+
+function completeDemo() {
+    clearInterval(demoInterval);
+    $('#start-demo-btn').show();
+    $('#pause-btn, #stop-btn').hide();
+    $('#loading-spinner').hide();
+    
+    $('#main-progress').removeClass('bg-info').addClass('bg-success');
+    $('#progress-text').text('Hoàn thành!');
+    $('#current-task').text('Crawl hoàn thành thành công!');
+    
+    addToLog('🎉 Crawl hoàn thành!', 'success');
+    addToLog(`📊 Kết quả: ${downloadedImages} thành công, ${failedImages} thất bại`, 'info');
+}
+
+function resetDemo() {
+    clearInterval(demoInterval);
+    currentProgress = 0;
+    downloadedImages = 0;
+    failedImages = 0;
+    isPaused = false;
+    
+    $('#main-progress').css('width', '0%').removeClass('bg-success bg-danger').addClass('bg-info');
+    $('#progress-percent').text('0%');
+    $('#progress-text').text('Đang khởi tạo...');
+    $('#total-found, #downloaded, #failed, #remaining').text('0');
+    $('#current-task').text('Đang khởi tạo crawler...');
+    $('#speed').text('0 ảnh/phút');
+    $('#current-image-name').text('Chưa có ảnh nào');
+    $('#image-progress').css('width', '0%');
+    $('#image-progress-percent').text('0%');
+    $('#image-size, #image-total-size').text('0 KB');
+    
+    $('#start-demo-btn').show();
+    $('#pause-btn, #stop-btn').hide();
+    $('#loading-spinner').show();
+    
+    clearLog();
+    addToLog('🔄 Reset demo hoàn tất', 'info');
+}
+
+function addToLog(message, type = 'info') {
+    let timestamp = new Date().toLocaleTimeString();
+    let icon = type === 'success' ? '✅' : type === 'danger' ? '❌' : type === 'warning' ? '⚠️' : 'ℹ️';
+    let colorClass = type === 'success' ? 'text-success' : type === 'danger' ? 'text-danger' : type === 'warning' ? 'text-warning' : 'text-info';
+    
+    let logEntry = `
+        <div class="${colorClass} mb-1">
+            ${icon} <strong>[${timestamp}]</strong> ${message}
+        </div>
+    `;
+    $('#activity-log').append(logEntry);
+    
+    // Auto scroll to bottom
+    let logContainer = $('#activity-log').parent();
+    logContainer.scrollTop(logContainer[0].scrollHeight);
+}
+
+function clearLog() {
+    $('#activity-log').html(`
+        <div class="text-success">
+            <i class="fas fa-play"></i> <strong>[${new Date().toLocaleTimeString()}]</strong> Khởi tạo Image Crawler...
+        </div>
+    `);
+}
+</script>
+{% endblock %}

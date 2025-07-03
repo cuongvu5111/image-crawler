@@ -1,0 +1,171 @@
+﻿{% extends 'image_crawler/base.html' %}
+
+{% block title %}Danh sách ảnh - Image Crawler{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <h4 class="mb-0">
+                    <i class="fas fa-images"></i> Danh sách ảnh đã crawl
+                </h4>
+            </div>
+            <div class="card-body">
+                <!-- Form tìm kiếm -->
+                <form method="get" class="mb-4">
+                    <div class="row">
+                        <div class="col-md-4">
+                            {{ form.search_query }}
+                        </div>
+                        <div class="col-md-2">
+                            {{ form.status_filter }}
+                        </div>
+                        <div class="col-md-2">
+                            {{ form.date_from }}
+                        </div>
+                        <div class="col-md-2">
+                            {{ form.date_to }}
+                        </div>
+                        <div class="col-md-2">
+                            <button type="submit" class="btn btn-primary w-100">
+                                <i class="fas fa-search"></i> Tìm kiếm
+                            </button>
+                        </div>
+                    </div>
+                </form>
+
+                <!-- Danh sách ảnh -->
+                {% if images %}
+                    <div class="row">
+                        {% for image in images %}
+                        <div class="col-md-3 col-sm-6 mb-4">
+                            <div class="card h-100">
+                                <img src="{{ image.image_url }}" class="card-img-top" alt="{{ image.image_name }}"
+                                     style="height: 200px; object-fit: cover;"
+                                     onerror="this.src='https://via.placeholder.com/200x200?text=No+Image'">
+                                
+                                <div class="card-body">
+                                    <h6 class="card-title">{{ image.image_name|truncatechars:30 }}</h6>
+                                    
+                                    <p class="card-text small">
+                                        <strong>Kích thước:</strong> {{ image.get_dimensions_display }}<br>
+                                        <strong>Dung lượng:</strong> {{ image.get_file_size_display }}<br>
+                                        <strong>Định dạng:</strong> {{ image.image_format|upper }}
+                                    </p>
+                                    
+                                    <div class="mb-2">
+                                        {% if image.status == 'completed' %}
+                                            <span class="badge bg-success">Hoàn thành</span>
+                                        {% elif image.status == 'failed' %}
+                                            <span class="badge bg-danger">Thất bại</span>
+                                        {% elif image.status == 'pending' %}
+                                            <span class="badge bg-warning">Đang chờ</span>
+                                        {% else %}
+                                            <span class="badge bg-info">{{ image.status }}</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                
+                                <div class="card-footer">
+                                    <div class="btn-group w-100" role="group">
+                                        <a href="{% url 'image_crawler:image_detail' image.id %}" 
+                                           class="btn btn-sm btn-outline-primary">
+                                            <i class="fas fa-eye"></i> Chi tiết
+                                        </a>
+                                        {% if image.local_path %}
+                                            <a href="{% url 'image_crawler:download_image' image.id %}" 
+                                               class="btn btn-sm btn-outline-success">
+                                                <i class="fas fa-download"></i> Tải
+                                            </a>
+                                        {% endif %}
+                                        <button class="btn btn-sm btn-outline-danger delete-image" 
+                                                data-image-id="{{ image.id }}">
+                                            <i class="fas fa-trash"></i> Xóa
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+
+                    <!-- Phân trang -->
+                    {% if page_obj.has_other_pages %}
+                        <nav aria-label="Phân trang">
+                            <ul class="pagination justify-content-center">
+                                {% if page_obj.has_previous %}
+                                    <li class="page-item">
+                                        <a class="page-link" href="?page=1{% if request.GET.search_query %}&search_query={{ request.GET.search_query }}{% endif %}{% if request.GET.status_filter %}&status_filter={{ request.GET.status_filter }}{% endif %}">Đầu</a>
+                                    </li>
+                                    <li class="page-item">
+                                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if request.GET.search_query %}&search_query={{ request.GET.search_query }}{% endif %}{% if request.GET.status_filter %}&status_filter={{ request.GET.status_filter }}{% endif %}">Trước</a>
+                                    </li>
+                                {% endif %}
+
+                                <li class="page-item active">
+                                    <span class="page-link">
+                                        Trang {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}
+                                    </span>
+                                </li>
+
+                                {% if page_obj.has_next %}
+                                    <li class="page-item">
+                                        <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if request.GET.search_query %}&search_query={{ request.GET.search_query }}{% endif %}{% if request.GET.status_filter %}&status_filter={{ request.GET.status_filter }}{% endif %}">Sau</a>
+                                    </li>
+                                    <li class="page-item">
+                                        <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if request.GET.search_query %}&search_query={{ request.GET.search_query }}{% endif %}{% if request.GET.status_filter %}&status_filter={{ request.GET.status_filter }}{% endif %}">Cuối</a>
+                                    </li>
+                                {% endif %}
+                            </ul>
+                        </nav>
+                    {% endif %}
+                {% else %}
+                    <div class="text-center py-5">
+                        <i class="fas fa-images fa-3x text-muted mb-3"></i>
+                        <h5>Không tìm thấy ảnh nào</h5>
+                        <p class="text-muted">Hãy thử crawl ảnh hoặc thay đổi bộ lọc tìm kiếm</p>
+                        <a href="{% url 'image_crawler:crawl' %}" class="btn btn-primary">
+                            <i class="fas fa-spider"></i> Crawl ảnh mới
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Xử lý xóa ảnh
+    $('.delete-image').on('click', function() {
+        var imageId = $(this).data('image-id');
+        var card = $(this).closest('.col-md-3');
+        
+        if (confirm('Bạn có chắc chắn muốn xóa ảnh này?')) {
+            $.ajax({
+                url: '/images/' + imageId + '/delete/',
+                type: 'POST',
+                headers: {
+                    'X-CSRFToken': $('[name=csrfmiddlewaretoken]').val()
+                },
+                success: function(response) {
+                    if (response.success) {
+                        card.fadeOut(300, function() {
+                            $(this).remove();
+                        });
+                    } else {
+                        alert('Lỗi khi xóa ảnh: ' + response.error);
+                    }
+                },
+                error: function() {
+                    alert('Lỗi kết nối. Vui lòng thử lại.');
+                }
+            });
+        }
+    });
+});
+</script>
+{% endblock %}

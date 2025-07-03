@@ -1,0 +1,192 @@
+﻿{% extends 'image_crawler/base.html' %}
+
+{% block title %}Crawl ảnh - Image Crawler{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8 mx-auto">
+        <div class="card">
+            <div class="card-header">
+                <h4 class="mb-0">
+                    <i class="fas fa-spider"></i> Crawl ảnh từ URL
+                </h4>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    
+                    <!-- URL -->
+                    <div class="mb-3">
+                        <label for="{{ form.url.id_for_label }}" class="form-label">
+                            {{ form.url.label }}
+                        </label>
+                        {{ form.url }}
+                        {% if form.url.help_text %}
+                            <div class="form-text">{{ form.url.help_text }}</div>
+                        {% endif %}
+                        {% if form.url.errors %}
+                            <div class="text-danger">
+                                {% for error in form.url.errors %}
+                                    <small>{{ error }}</small>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Cài đặt crawl -->
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="{{ form.max_images.id_for_label }}" class="form-label">
+                                    {{ form.max_images.label }}
+                                </label>
+                                {{ form.max_images }}
+                                {% if form.max_images.help_text %}
+                                    <div class="form-text">{{ form.max_images.help_text }}</div>
+                                {% endif %}
+                                {% if form.max_images.errors %}
+                                    <div class="text-danger">
+                                        {% for error in form.max_images.errors %}
+                                            <small>{{ error }}</small>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <div class="form-check">
+                                    {{ form.download_images }}
+                                    <label class="form-check-label" for="{{ form.download_images.id_for_label }}">
+                                        {{ form.download_images.label }}
+                                    </label>
+                                </div>
+                                {% if form.download_images.help_text %}
+                                    <div class="form-text">{{ form.download_images.help_text }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Kích thước ảnh -->
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="{{ form.min_width.id_for_label }}" class="form-label">
+                                    {{ form.min_width.label }}
+                                </label>
+                                {{ form.min_width }}
+                                {% if form.min_width.help_text %}
+                                    <div class="form-text">{{ form.min_width.help_text }}</div>
+                                {% endif %}
+                                {% if form.min_width.errors %}
+                                    <div class="text-danger">
+                                        {% for error in form.min_width.errors %}
+                                            <small>{{ error }}</small>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="{{ form.min_height.id_for_label }}" class="form-label">
+                                    {{ form.min_height.label }}
+                                </label>
+                                {{ form.min_height }}
+                                {% if form.min_height.help_text %}
+                                    <div class="form-text">{{ form.min_height.help_text }}</div>
+                                {% endif %}
+                                {% if form.min_height.errors %}
+                                    <div class="text-danger">
+                                        {% for error in form.min_height.errors %}
+                                            <small>{{ error }}</small>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Định dạng ảnh -->
+                    <div class="mb-3">
+                        <label class="form-label">{{ form.allowed_formats.label }}</label>
+                        <div class="row">
+                            {% for choice in form.allowed_formats %}
+                                <div class="col-md-2 col-4">
+                                    <div class="form-check">
+                                        {{ choice.tag }}
+                                        <label class="form-check-label" for="{{ choice.id_for_label }}">
+                                            {{ choice.choice_label }}
+                                        </label>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                        {% if form.allowed_formats.help_text %}
+                            <div class="form-text">{{ form.allowed_formats.help_text }}</div>
+                        {% endif %}
+                        {% if form.allowed_formats.errors %}
+                            <div class="text-danger">
+                                {% for error in form.allowed_formats.errors %}
+                                    <small>{{ error }}</small>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Nút submit -->
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            <i class="fas fa-spider"></i> Bắt đầu crawl
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Lưu ý -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h6 class="mb-0">
+                    <i class="fas fa-info-circle"></i> Lưu ý quan trọng
+                </h6>
+            </div>
+            <div class="card-body">
+                <ul class="mb-0">
+                    <li>Chỉ crawl ảnh từ các trang web bạn có quyền truy cập</li>
+                    <li>Tôn trọng robots.txt và chính sách của trang web</li>
+                    <li>Không crawl quá nhiều ảnh cùng lúc để tránh làm quá tải server</li>
+                    <li>Một số trang web có thể chặn crawling, hãy thử với URL khác</li>
+                    <li>Ảnh sẽ được lưu trong thư mục media/crawled_images/</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Hiển thị loading khi submit form
+    $('form').on('submit', function() {
+        $('button[type="submit"]').html('<i class="fas fa-spinner fa-spin"></i> Đang crawl...').prop('disabled', true);
+    });
+    
+    // Validate URL khi người dùng nhập
+    $('#id_url').on('blur', function() {
+        var url = $(this).val();
+        if (url && !url.match(/^https?:\/\/.+/)) {
+            $(this).addClass('is-invalid');
+            if (!$(this).next('.invalid-feedback').length) {
+                $(this).after('<div class="invalid-feedback">URL phải bắt đầu bằng http:// hoặc https://</div>');
+            }
+        } else {
+            $(this).removeClass('is-invalid');
+            $(this).next('.invalid-feedback').remove();
+        }
+    });
+});
+</script>
+{% endblock %}

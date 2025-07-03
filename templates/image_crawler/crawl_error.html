@@ -1,0 +1,158 @@
+﻿{% extends 'image_crawler/base.html' %}
+
+{% block title %}Lỗi crawl - Image Crawler{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8 mx-auto">
+        <div class="card border-danger">
+            <div class="card-header bg-danger text-white">
+                <h4 class="mb-0">
+                    <i class="fas fa-exclamation-triangle"></i> Crawl thất bại
+                </h4>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-danger" role="alert">
+                    <h5 class="alert-heading">Không thể crawl ảnh từ URL này!</h5>
+                    <p class="mb-0">{{ error_message }}</p>
+                </div>
+
+                <h6 class="mt-4 mb-3">
+                    <i class="fas fa-lightbulb"></i> Các giải pháp có thể thử:
+                </h6>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="card bg-light">
+                            <div class="card-body">
+                                <h6 class="card-title">
+                                    <i class="fas fa-globe"></i> Thử trang web khác
+                                </h6>
+                                <p class="card-text small">
+                                    Một số trang web chặn bot/crawler. Hãy thử với:
+                                </p>
+                                <ul class="small">
+                                    <li>Trang tin tức công khai</li>
+                                    <li>Blog cá nhân</li>
+                                    <li>Trang thương mại điện tử</li>
+                                    <li>Wikipedia</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <div class="card bg-light">
+                            <div class="card-body">
+                                <h6 class="card-title">
+                                    <i class="fas fa-clock"></i> Thử lại sau
+                                </h6>
+                                <p class="card-text small">
+                                    Trang web có thể tạm thời chặn do:
+                                </p>
+                                <ul class="small">
+                                    <li>Quá nhiều request cùng lúc</li>
+                                    <li>Bảo trì hệ thống</li>
+                                    <li>Giới hạn tốc độ truy cập</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card bg-info text-white mt-3">
+                    <div class="card-body">
+                        <h6 class="card-title">
+                            <i class="fas fa-info-circle"></i> Trang web được khuyến nghị test:
+                        </h6>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <ul class="mb-0">
+                                    <li><a href="#" class="text-white" onclick="fillUrl('https://unsplash.com/')">Unsplash.com</a> - Ảnh miễn phí</li>
+                                    <li><a href="#" class="text-white" onclick="fillUrl('https://pixabay.com/')">Pixabay.com</a> - Ảnh stock</li>
+                                    <li><a href="#" class="text-white" onclick="fillUrl('https://www.pexels.com/')">Pexels.com</a> - Ảnh chất lượng cao</li>
+                                </ul>
+                            </div>
+                            <div class="col-md-6">
+                                <ul class="mb-0">
+                                    <li><a href="#" class="text-white" onclick="fillUrl('https://en.wikipedia.org/wiki/Vietnam')">Wikipedia</a> - Bách khoa toàn thư</li>
+                                    <li><a href="#" class="text-white" onclick="fillUrl('https://www.nasa.gov/')">NASA.gov</a> - Ảnh khoa học</li>
+                                    <li><a href="#" class="text-white" onclick="fillUrl('https://www.bbc.com/news')">BBC News</a> - Tin tức</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-4 text-center">
+                    <a href="{% url 'image_crawler:crawl' %}" class="btn btn-primary me-2">
+                        <i class="fas fa-redo"></i> Thử lại với URL khác
+                    </a>
+                    <a href="{% url 'image_crawler:index' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-home"></i> Về trang chủ
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Hướng dẫn chi tiết -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h6 class="mb-0">
+                    <i class="fas fa-question-circle"></i> Tại sao một số trang web không crawl được?
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="accordion" id="faqAccordion">
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="headingOne">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseOne">
+                                403 Forbidden Error
+                            </button>
+                        </h2>
+                        <div id="collapseOne" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                            <div class="accordion-body">
+                                <p>Trang web từ chối truy cập từ bot/crawler. Nguyên nhân:</p>
+                                <ul>
+                                    <li><strong>Cloudflare Protection:</strong> Nhiều trang dùng Cloudflare để chặn bot</li>
+                                    <li><strong>Rate Limiting:</strong> Giới hạn số request trong thời gian ngắn</li>
+                                    <li><strong>User-Agent Detection:</strong> Phát hiện và chặn bot dựa trên User-Agent</li>
+                                    <li><strong>IP Blocking:</strong> Chặn IP có hoạt động bất thường</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="headingTwo">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTwo">
+                                Robots.txt và Ethics
+                            </button>
+                        </h2>
+                        <div id="collapseTwo" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                            <div class="accordion-body">
+                                <p>Luôn tôn trọng quy tắc của trang web:</p>
+                                <ul>
+                                    <li>Kiểm tra file <code>/robots.txt</code> của trang web</li>
+                                    <li>Không crawl quá nhanh để tránh làm quá tải server</li>
+                                    <li>Chỉ crawl nội dung công khai</li>
+                                    <li>Tôn trọng bản quyền và quyền riêng tư</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function fillUrl(url) {
+    // Redirect to crawl page with pre-filled URL
+    window.location.href = '{% url "image_crawler:crawl" %}?url=' + encodeURIComponent(url);
+}
+</script>
+{% endblock %}

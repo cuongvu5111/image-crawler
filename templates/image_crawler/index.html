@@ -1,0 +1,192 @@
+﻿{% extends 'image_crawler/base.html' %}
+
+{% block title %}Trang chủ - Image Crawler{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <div class="jumbotron bg-primary text-white p-5 rounded mb-4">
+            <h1 class="display-4">
+                <i class="fas fa-images"></i> Image Crawler
+            </h1>
+            <p class="lead">Công cụ crawl ảnh từ bất kỳ trang web nào một cách dễ dàng và nhanh chóng.</p>
+            <hr class="my-4">
+            <p>Nhập URL trang web và để chúng tôi tìm kiếm tất cả ảnh cho bạn!</p>
+            <a class="btn btn-light btn-lg" href="{% url 'image_crawler:crawl' %}" role="button">
+                <i class="fas fa-spider"></i> Bắt đầu crawl
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Thống kê -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card stats-card">
+            <div class="card-body text-center">
+                <i class="fas fa-images fa-2x mb-2"></i>
+                <h4>{{ stats.total_images }}</h4>
+                <p class="mb-0">Tổng ảnh</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-success text-white">
+            <div class="card-body text-center">
+                <i class="fas fa-check-circle fa-2x mb-2"></i>
+                <h4>{{ stats.completed_images }}</h4>
+                <p class="mb-0">Thành công</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-danger text-white">
+            <div class="card-body text-center">
+                <i class="fas fa-times-circle fa-2x mb-2"></i>
+                <h4>{{ stats.failed_images }}</h4>
+                <p class="mb-0">Thất bại</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-info text-white">
+            <div class="card-body text-center">
+                <i class="fas fa-history fa-2x mb-2"></i>
+                <h4>{{ stats.total_sessions }}</h4>
+                <p class="mb-0">Phiên crawl</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Form crawl nhanh -->
+<div class="row mb-4">
+    <div class="col-md-8 mx-auto">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-bolt"></i> Crawl nhanh
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="post" action="{% url 'image_crawler:crawl' %}">
+                    {% csrf_token %}
+                    <div class="row">
+                        <div class="col-md-8">
+                            {{ form.url }}
+                        </div>
+                        <div class="col-md-4">
+                            <button type="submit" class="btn btn-primary w-100">
+                                <i class="fas fa-spider"></i> Crawl ngay
+                            </button>
+                        </div>
+                    </div>
+                    <small class="text-muted">
+                        Sử dụng cài đặt mặc định: tối đa 10 ảnh, định dạng JPG/PNG
+                    </small>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Ảnh gần đây -->
+{% if recent_images %}
+<div class="row">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="fas fa-clock"></i> Ảnh mới nhất
+                </h5>
+                <a href="{% url 'image_crawler:image_list' %}" class="btn btn-sm btn-outline-primary">
+                    Xem tất cả
+                </a>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    {% for image in recent_images %}
+                    <div class="col-md-2 col-sm-4 col-6 mb-3">
+                        <div class="card h-100">
+                            {% if image.local_path %}
+                                <img src="{{ image.image_url }}" class="card-img-top" alt="{{ image.image_name }}" 
+                                     onerror="this.src='https://via.placeholder.com/200x200?text=No+Image'">
+                            {% else %}
+                                <img src="{{ image.image_url }}" class="card-img-top" alt="{{ image.image_name }}"
+                                     onerror="this.src='https://via.placeholder.com/200x200?text=No+Image'">
+                            {% endif %}
+                            <div class="card-body p-2">
+                                <h6 class="card-title small">{{ image.image_name|truncatechars:20 }}</h6>
+                                <p class="card-text small text-muted">
+                                    {{ image.get_file_size_display }}
+                                    {% if image.width and image.height %}
+                                        <br>{{ image.width }}x{{ image.height }}
+                                    {% endif %}
+                                </p>
+                                <a href="{% url 'image_crawler:image_detail' image.id %}" class="btn btn-sm btn-primary">
+                                    Chi tiết
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% else %}
+<div class="row">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-body text-center">
+                <i class="fas fa-images fa-3x text-muted mb-3"></i>
+                <h5>Chưa có ảnh nào</h5>
+                <p class="text-muted">Hãy bắt đầu crawl ảnh đầu tiên của bạn!</p>
+                <a href="{% url 'image_crawler:crawl' %}" class="btn btn-primary">
+                    <i class="fas fa-spider"></i> Bắt đầu crawl
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Hướng dẫn sử dụng -->
+<div class="row mt-4">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-question-circle"></i> Hướng dẫn sử dụng
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="text-center">
+                            <i class="fas fa-link fa-2x text-primary mb-2"></i>
+                            <h6>1. Nhập URL</h6>
+                            <p class="small text-muted">Nhập URL của trang web bạn muốn crawl ảnh</p>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="text-center">
+                            <i class="fas fa-cog fa-2x text-primary mb-2"></i>
+                            <h6>2. Cấu hình</h6>
+                            <p class="small text-muted">Chọn số lượng ảnh, kích thước và định dạng mong muốn</p>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="text-center">
+                            <i class="fas fa-download fa-2x text-primary mb-2"></i>
+                            <h6>3. Tải về</h6>
+                            <p class="small text-muted">Hệ thống sẽ tự động tìm và tải ảnh về cho bạn</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
