@@ -1,0 +1,260 @@
+﻿{% extends 'image_crawler/base.html' %}
+
+{% block title %}Đang crawl ảnh - Image Crawler{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8 mx-auto">
+        <div class="card">
+            <div class="card-header">
+                <h4 class="mb-0">
+                    <i class="fas fa-spider fa-spin"></i> Đang crawl ảnh...
+                </h4>
+            </div>
+            <div class="card-body">
+                <!-- Progress Bar chính -->
+                <div class="mb-4">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="fw-bold">Tiến trình tổng thể:</span>
+                        <span id="progress-percent" class="badge bg-primary">0%</span>
+                    </div>
+                    <div class="progress mb-2" style="height: 25px;">
+                        <div id="main-progress" class="progress-bar progress-bar-striped progress-bar-animated" 
+                             role="progressbar" style="width: 0%" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
+                            <span id="progress-text">Đang khởi tạo...</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Thông tin chi tiết -->
+                <div class="row text-center mb-4">
+                    <div class="col-md-3">
+                        <div class="card bg-info text-white">
+                            <div class="card-body py-2">
+                                <h5 id="total-found" class="mb-1">0</h5>
+                                <small>Tìm thấy</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card bg-success text-white">
+                            <div class="card-body py-2">
+                                <h5 id="downloaded" class="mb-1">0</h5>
+                                <small>Thành công</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card bg-danger text-white">
+                            <div class="card-body py-2">
+                                <h5 id="failed" class="mb-1">0</h5>
+                                <small>Thất bại</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card bg-warning text-white">
+                            <div class="card-body py-2">
+                                <h5 id="remaining" class="mb-1">0</h5>
+                                <small>Còn lại</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Trạng thái hiện tại -->
+                <div class="alert alert-info" role="alert">
+                    <div class="d-flex align-items-center">
+                        <div class="spinner-border spinner-border-sm me-2" role="status" id="loading-spinner">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <div>
+                            <strong>Trạng thái:</strong> 
+                            <span id="current-task">Đang khởi tạo...</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Log hoạt động -->
+                <div class="card">
+                    <div class="card-header">
+                        <h6 class="mb-0">
+                            <i class="fas fa-list"></i> Log hoạt động
+                        </h6>
+                    </div>
+                    <div class="card-body" style="max-height: 200px; overflow-y: auto;">
+                        <div id="activity-log">
+                            <div class="text-muted">
+                                <i class="fas fa-clock"></i> {{ session.started_at|date:"H:i:s" }} - Bắt đầu crawl từ: {{ session.target_url }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Nút điều khiển -->
+                <div class="text-center mt-4">
+                    <button id="cancel-btn" class="btn btn-outline-danger me-2" onclick="cancelCrawl()">
+                        <i class="fas fa-stop"></i> Hủy crawl
+                    </button>
+                    <a href="{% url 'image_crawler:session_detail' session.id %}" id="view-results-btn" 
+                       class="btn btn-success" style="display: none;">
+                        <i class="fas fa-eye"></i> Xem kết quả
+                    </a>
+                    <a href="{% url 'image_crawler:crawl' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left"></i> Quay lại
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal hoàn thành -->
+<div class="modal fade" id="completedModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-check-circle"></i> Crawl hoàn thành!
+                </h5>
+            </div>
+            <div class="modal-body text-center">
+                <div class="mb-3">
+                    <i class="fas fa-images fa-3x text-success mb-3"></i>
+                    <h5>Đã crawl thành công!</h5>
+                </div>
+                <div class="row">
+                    <div class="col-6">
+                        <div class="card bg-light">
+                            <div class="card-body">
+                                <h4 id="final-downloaded" class="text-success">0</h4>
+                                <small>Ảnh thành công</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="card bg-light">
+                            <div class="card-body">
+                                <h4 id="final-failed" class="text-danger">0</h4>
+                                <small>Ảnh thất bại</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <a href="{% url 'image_crawler:session_detail' session.id %}" class="btn btn-success">
+                    <i class="fas fa-eye"></i> Xem chi tiết
+                </a>
+                <a href="{% url 'image_crawler:crawl' %}" class="btn btn-outline-secondary">
+                    <i class="fas fa-spider"></i> Crawl mới
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let sessionId = {{ session.id }};
+let progressInterval;
+let activityLog = [];
+
+$(document).ready(function() {
+    startProgressTracking();
+});
+
+function startProgressTracking() {
+    progressInterval = setInterval(updateProgress, 2000); // Cập nhật mỗi 2 giây
+    updateProgress(); // Cập nhật ngay lập tức
+}
+
+function updateProgress() {
+    $.ajax({
+        url: '{% url "image_crawler:crawl_progress_api" session.id %}',
+        type: 'GET',
+        success: function(data) {
+            // Cập nhật progress bar
+            $('#main-progress').css('width', data.progress + '%');
+            $('#main-progress').attr('aria-valuenow', data.progress);
+            $('#progress-percent').text(data.progress + '%');
+            
+            // Cập nhật số liệu
+            $('#total-found').text(data.total_found);
+            $('#downloaded').text(data.downloaded);
+            $('#failed').text(data.failed);
+            $('#remaining').text(data.total_found - data.downloaded - data.failed);
+            
+            // Cập nhật trạng thái
+            $('#current-task').text(data.current_task);
+            
+            // Thêm vào log nếu có thay đổi
+            if (activityLog.length === 0 || activityLog[activityLog.length - 1] !== data.current_task) {
+                activityLog.push(data.current_task);
+                addToLog(data.current_task);
+            }
+            
+            // Cập nhật màu progress bar
+            let progressBar = $('#main-progress');
+            progressBar.removeClass('bg-info bg-success bg-danger bg-warning');
+            
+            if (data.status === 'completed') {
+                progressBar.addClass('bg-success');
+                $('#progress-text').text('Hoàn thành!');
+            } else if (data.status === 'failed') {
+                progressBar.addClass('bg-danger');
+                $('#progress-text').text('Thất bại!');
+            } else {
+                progressBar.addClass('bg-info');
+                $('#progress-text').text(data.progress + '%');
+            }
+            
+            // Kiểm tra hoàn thành
+            if (data.is_completed) {
+                clearInterval(progressInterval);
+                $('#loading-spinner').hide();
+                $('#cancel-btn').hide();
+                $('#view-results-btn').show();
+                
+                // Hiển thị modal hoàn thành
+                $('#final-downloaded').text(data.downloaded);
+                $('#final-failed').text(data.failed);
+                $('#completedModal').modal('show');
+            }
+        },
+        error: function() {
+            console.log('Lỗi khi lấy progress');
+        }
+    });
+}
+
+function addToLog(message) {
+    let timestamp = new Date().toLocaleTimeString();
+    let logEntry = `
+        <div class="text-muted small mb-1">
+            <i class="fas fa-clock"></i> ${timestamp} - ${message}
+        </div>
+    `;
+    $('#activity-log').append(logEntry);
+    
+    // Auto scroll to bottom
+    let logContainer = $('#activity-log').parent();
+    logContainer.scrollTop(logContainer[0].scrollHeight);
+}
+
+function cancelCrawl() {
+    if (confirm('Bạn có chắc chắn muốn hủy crawl?')) {
+        clearInterval(progressInterval);
+        window.location.href = '{% url "image_crawler:crawl" %}';
+    }
+}
+
+// Cleanup khi rời trang
+$(window).on('beforeunload', function() {
+    if (progressInterval) {
+        clearInterval(progressInterval);
+    }
+});
+</script>
+{% endblock %}
